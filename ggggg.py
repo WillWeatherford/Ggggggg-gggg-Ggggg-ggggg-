@@ -1,6 +1,6 @@
 import re
 
-KEY_RE = re.compile(r'[A-Za-z]\s[Gg]+')
+KEY_RE = re.compile(r'(^|\s)[A-Za-z]{1}\s[Gg]+')
 
 
 def encode(s):
@@ -8,16 +8,19 @@ def encode(s):
 
 
 def decode(s):
-    parts = s.split('\n')
-    keys_part = parts.pop(0)
-    s = ' '.join(parts)
+    matches = list(KEY_RE.finditer(s))
+    assert matches, 'Unable to match decoding key regular expression.'
 
-    keys = dict([reversed(k.split(' ')) for k in KEY_RE.findall(keys_part)])
-    keys_re = re.compile(r'' + '|'.join([k for k in keys.keys()]))
+    keys = dict([reversed(m.group().strip(' \n').split(' ')) for m in matches])
+    assert keys, 'Unable to create decoding keys.'
+    keys_re = re.compile(r'' + '|'.join([r'^' + k for k in keys.keys()]))
+
+    last_match_end = matches[-1].end()
+    s = s[last_match_end:].replace('\n', ' ').strip()
 
     letters = []
     while s:
-        print s[0]
+        # print s[0]
         if s[0].isalpha():
             match = keys_re.match(s)
             if not match:
