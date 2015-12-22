@@ -6,31 +6,78 @@ MIN_CODEBIT_LEN = 2
 BIT = ('g', 'G')
 
 
+class Node(object):
+    def __init__(self):
+        self.bits = ''
+        self.parent = None
+
+    def assign_bits(self):
+        if not hasattr(self, 'children'):
+            return
+        for i, c in enumerate(self.children):
+            c.bits = self.bits + BIT[i]
+            c.assign_bits()
+
+    def get_code(self):
+        if not hasattr(self, 'children'):
+            return {self.char: self.bits}
+        else:
+            code = {}
+            for c in self.children:
+                code.update(c.get_code())
+            return code
+
+
+class InnerNode(Node):
+    def __init__(self, children):
+        super(InnerNode, self).__init__()
+        self.children = children
+        for c in children:
+            c.parent = self
+        print('InnerNode created. children:\n\t{}'.format('\n\t'.join(
+            [str(c) for c in self.children])))
+
+    @property
+    def count(self):
+        return sum([c.count for c in self.children])
+
+
+class CharNode(Node):
+    def __init__(self, char, count):
+        super(CharNode, self).__init__()
+        self.char = char
+        self.count = count
+
+    def __str__(self):
+        return 'Char "{}"; count: {}, bits: {}'.format(self.char, self.count,
+                                                       self.bits)
+
+
+def char_count(s):
+    chars = list(set(string.ascii_letters) & set(s))
+    chars = [CharNode(char, s.count(char)) for char in chars]
+    return chars
+
+
 def encode(s):
     # count num of used chars, i.e. minimum amount of codebits needed
-    chars = list(set(string.ascii_letters) & set(s))
-    num_chars = len(chars)
-    codebits = generate_codebits(num_chars)
-    assert len(chars) == len(codebits)
-    code = dict(zip(chars, codebits))
+    chars = char_count(s)
+    queue = list(chars)
+    while len(queue) > 1:
+        print('Re-sorting queue...')
+        queue = sorted(queue, key=lambda c: c.count)
+        print('Queue re-sorted. Length: {}'.format(len(queue)))
+        newnode = InnerNode((queue.pop(0), queue.pop(0)))  # get first 2 (lowest count) from queue
+        queue.append(newnode)
+    print('Exited while loop.')
+    root = queue.pop()
+    root.assign_bits()  # combine
+    code = root.get_code()  # into one func
+    print(code)
     keystring = ' '.join([' '.join(pair) for pair in code.items()])
     for char, codebit in code.items():
         s = s.replace(char, codebit)
     return '\n'.join((keystring, s))
-
-
-def generate_codebits(n, all_codebits=None, prev_codebits=None):
-    if all_codebits is None or prev_codebits is None:
-        all_codebits, prev_codebits = [], list(BIT)
-
-    new_codebits = [c + b for c in prev_codebits for b in BIT]
-
-    delta = n - len(all_codebits)
-    all_codebits.extend(new_codebits[:delta])
-
-    if len(all_codebits) == n:
-        return all_codebits
-    return generate_codebits(n, all_codebits, new_codebits)
 
 
 def decode(s):
