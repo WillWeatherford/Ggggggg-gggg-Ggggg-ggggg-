@@ -2,7 +2,6 @@ import re
 import string
 
 KEY_RE = re.compile(r'(^|\s)[A-Za-z]{1}\s[Gg]{2,}')
-MIN_CODEBIT_LEN = 2
 BIT = ('g', 'G')
 
 
@@ -10,8 +9,6 @@ class InnerNode(object):
     def __init__(self, children):
         self.children = children
         self.bits = ''
-        # print('InnerNode created. children:\n\t{}'.format('\n\t'.join(
-        #     [str(c) for c in self.children])))
 
     @property
     def count(self):
@@ -31,10 +28,6 @@ class CharNode(object):
         self.char = char
         self.count = count
         self.bits = ''
-
-    def __str__(self):
-        return 'Char "{}"; count: {}, bits: {}'.format(self.char, self.count,
-                                                       self.bits)
 
     def get_code(self):
         return {self.char: self.bits}
@@ -67,17 +60,13 @@ def decode(s):
 
     letters = []
     while s:
-        if s[0].isalpha():
-            match = keys_re.match(s)
-            if not match:
-                raise TypeError('Unable to match a decode key pattern at start '
-                                'of string. Decoded so far:\n{}'.format(
-                                    ''.join(letters)))
-            end_index = match.end()
-        else:
+        match = keys_re.match(s)
+        if not match:
             end_index = 1
-        value = s[:end_index]
-        value = keys.get(value, value)
+        else:
+            end_index = match.end()
+        text = s[:end_index]
+        value = keys.get(text, text)
         letters.append(value)
         s = s[end_index:]
     return ''.join(letters)
